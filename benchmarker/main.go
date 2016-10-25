@@ -22,7 +22,7 @@ func init() {
 }
 
 func main() {
-	var url string = "ws://127.0.0.1:8080/{{ randomString 32 }}"
+	var url string = "ws://127.0.0.1:8080/{{ . }}-{{ randomString 32 }}"
 	var origin string = ""
 	var numConnections int = 1
 
@@ -41,7 +41,7 @@ func main() {
 	for i := 0; i < numConnections; i++ {
 		go func(n int) {
 			time.Sleep(time.Duration(n) * 10 * time.Millisecond)
-			err := connectAndHandle(url, origin, waitGroup, quitting)
+			err := connectAndHandle(n, url, origin, waitGroup, quitting)
 			if err != nil {
 				log.Printf("%v\n", err)
 			}
@@ -73,11 +73,11 @@ func main() {
 	}
 }
 
-func connectAndHandle(templateURL, origin string, waitGroup *common.WaitGroup, quitting chan struct{}) error {
+func connectAndHandle(index int, templateURL, origin string, waitGroup *common.WaitGroup, quitting chan struct{}) error {
 	waitGroup.Add(1)
 	defer waitGroup.Done()
 
-	endpointRaw, err := parse(templateURL)
+	endpointRaw, err := parseWithData(templateURL, &index)
 	if err != nil {
 		return err
 	}

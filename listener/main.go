@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"strconv"
 
 	"gopkg.in/redis.v5"
 	"gopkg.in/tylerb/graceful.v1"
@@ -32,6 +33,11 @@ func (*httpError) Error() string {
 func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 	id := strings.TrimLeft(r.URL.Path, "/")
 
+	var sleepMs time.Duration = -1
+	if n, err := strconv.Atoi(strings.Split(id, "-")[0]); err != nil && n > 0 {
+		sleepMs = time.Duration(n)
+	}
+
 	waitGroup.Add(1)
 	defer waitGroup.Done()
 
@@ -43,6 +49,9 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 		return &httpError{http.StatusInternalServerError}
 	}
 	defer func() {
+		if sleepMs > 0  {
+			time.Sleep(sleepMs * time.Millisecond)
+		}
 		if err := dlock.Unlock(); err != nil {
 			log.Printf("failed to unlock dlock for '%s': %v\n", id, err)
 		}
@@ -121,7 +130,11 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if err := websocketHandler(w, r); err != nil {
-			w.WriteHeader(err.(*httpError).statusCode)
+			var statusCode int = http.StatusInternalServerError
+			if he, ok := err.(*httpError); ok {
+				statusCode = he.statusCode
+			}
+			w.WriteHeader(statusCode)
 		}
 	})
 
