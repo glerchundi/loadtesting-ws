@@ -1,0 +1,31 @@
+hash: 9567ed0a535c64d430fdd6728c55cc0a33553ffac7b781e9020c97ebc3f75dab
+updated: 2016-10-25T21:19:48.091926956+02:00
+imports:
+- name: github.com/bsm/redis-lock
+  version: 1276befe593b36127d88aeac09faca3af17a14fc
+- name: github.com/gorilla/websocket
+  version: 1f512fc3f05332ba7117626cdfb4e07474e58e60
+- name: github.com/spf13/pflag
+  version: 5ccb023bc27df288a957c5e994cd44fd19619465
+- name: gopkg.in/bsm/ratelimit.v1
+  version: db14e161995a5177acef654cb0dd785e8ee8bc22
+- name: gopkg.in/redis.v4
+  version: 8a8d997ad58dc600d2ff0f64914102192f3b51ac
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/errors
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
+- name: gopkg.in/redis.v5
+  version: 80cf5d1652d5590c35edc6c2dc1aa354790e3010
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
+- name: gopkg.in/tylerb/graceful.v1
+  version: 50a48b6e73fcc75b45e22c05b79629a67c79e938
+testImports: []
