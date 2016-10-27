@@ -37,7 +37,7 @@ type RedPubSubClient struct {
 }
 
 // NewPubSubClient creates a new pubsub client
-func NewRedPubSubClient(redisClient *redis.Client) PubSubClient {
+func NewRedPubSubClient(redisClient *redis.Client) *RedPubSubClient {
 	return &RedPubSubClient{
 		redisClient: redisClient,
 		closing:     false,
@@ -135,7 +135,7 @@ type MockPubSubClient struct {
 }
 
 // NewPubSubClient creates a new pubsub client
-func NewMockPubSubClient() PubSubClient {
+func NewMockPubSubClient() *MockPubSubClient {
 	return &MockPubSubClient{
 		recv: make(chan []byte, 256),
 		send: make(chan *sendMessage, 256),

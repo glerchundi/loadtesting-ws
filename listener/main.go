@@ -46,7 +46,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 	waitGroup.Add(1)
 	defer waitGroup.Done()
 
-	var dlock *util.RedLock
+	var dlock util.Lock
 	var ttl time.Duration = 10 * time.Second
 	var psclient util.PubSubClient
 	if redisClient != nil {
@@ -74,6 +74,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 
 		psclient = util.NewRedPubSubClient(redisClient)
 	} else {
+		dlock = util.NewMockLock()
 		psclient = util.NewMockPubSubClient()
 	}
 
