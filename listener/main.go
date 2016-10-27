@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"net"
 	"os"
+	"fmt"
 	//"strconv"
 
 	"gopkg.in/redis.v5"
@@ -15,6 +15,7 @@ import (
 	common "github.com/glerchundi/redis-issue/util"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/pflag"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -23,6 +24,20 @@ var (
 	upgrader websocket.Upgrader
 	waitGroup *common.WaitGroup
 	quitting chan struct{}
+
+	wsConnectionsActive = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "ws_connections_active",
+			Help: "Total number of connections.",
+		},
+	)
+
+	wsConnectionsFailed = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "ws_connections_failed",
+			Help: "Failed number of connections.",
+		},
+	)
 )
 
 type httpError struct {
@@ -31,6 +46,11 @@ type httpError struct {
 
 func (*httpError) Error() string {
 	return ""
+}
+
+func init() {
+	prometheus.MustRegister(wsConnectionsActive)
+	prometheus.MustRegister(wsConnectionsFailed)
 }
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) error {
@@ -45,6 +65,9 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 
 	waitGroup.Add(1)
 	defer waitGroup.Done()
+
+	wsConnectionsActive.Inc()
+	defer wsConnectionsActive.Dec()
 
 	var dlock util.Lock
 	var ttl time.Duration = 10 * time.Second
@@ -107,46 +130,20 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 			if ok, err := dlock.Renew(); err != nil {
 				return err
 			} else if !ok {
-				log.Println("unable to renew lock")
-				return nil
+				return fmt.Errorf("unable to renew lock")
 			}
 		case _, ok := <-psclient.ReadMessage():
 			if !ok {
-				log.Println("redis pubsub channel closed")
-				return nil
+				return fmt.Errorf("redis pubsub channel closed")
 			}
 		case _, ok := <-wsclient.ReadMessage():
 			if !ok {
-				log.Println("websocket channel closed")
-				return nil
+				return fmt.Errorf("websocket channel closed")
 			}
 		}
 	}
 
 	return nil
-}
-
-func printInterfaces() {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return
-	}
-
-	for _, i := range ifaces {
-		addrs, _ := i.Addrs()
-		if err == nil {
-			for _, addr := range addrs {
-				var ip net.IP
-				switch v := addr.(type) {
-				case *net.IPNet:
-					ip = v.IP
-				case *net.IPAddr:
-					ip = v.IP
-				}
-				log.Println(ip)
-			}
-		}
-	}
 }
 
 func main() {
@@ -158,8 +155,6 @@ func main() {
 	fs.IntVar(&poolSize, "pool-size", poolSize, "")
 
 	fs.Parse(os.Args[1:])
-
-	printInterfaces()
 
 	if addr != "" {
 		redisClient = redis.NewClient(&redis.Options{
@@ -183,8 +178,11 @@ func main() {
 	defer log.Println("Listener stopped")
 
 	mux := http.NewServeMux()
+	mux.Handle("/metrics", prometheus.Handler())
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if err := websocketHandler(w, r); err != nil {
+			wsConnectionsFailed.Inc()
+			log.Printf("%v\n", err)
 			var statusCode int = http.StatusInternalServerError
 			if he, ok := err.(*httpError); ok {
 				statusCode = he.statusCode
