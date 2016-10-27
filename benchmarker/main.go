@@ -107,7 +107,9 @@ func connectAndHandle(index int, templateURL, origin string, waitGroup *common.W
 	if err != nil {
 		return err
 	}
+	
 	ws := common.NewWebSocketClient(conn)
+	ws.Run()
 
 	log.Printf("Connected to: %s\n", endpoint)
 
