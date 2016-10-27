@@ -103,19 +103,22 @@ func connectAndHandle(index int, templateURL, origin string, waitGroup *common.W
 
 	log.Printf("Trying to connect to: %s\n", endpoint)
 
-	ws, _, err := websocket.DefaultDialer.Dial(endpoint, headers)
+	conn, _, err := websocket.DefaultDialer.Dial(endpoint, headers)
 	if err != nil {
 		return err
 	}
+	ws := common.NewWebSocketClient(conn)
 
 	log.Printf("Connected to: %s\n", endpoint)
 
 	go func() {
 		for {
-			_, _, err := ws.ReadMessage()
-			if err != nil {
-				log.Printf("%v\n", err)
-				return
+			select {
+			case _, ok := <-ws.ReadMessage():
+				if !ok {
+					log.Printf("websocket channel closed\n")
+					return
+				}
 			}
 
 			/*
@@ -140,7 +143,7 @@ func connectAndHandle(index int, templateURL, origin string, waitGroup *common.W
 	}
 
 	// send close message for graceful termination
-	err = ws.WriteMessage(websocket.CloseMessage, []byte{})
+	err = ws.Conn().WriteMessage(websocket.CloseMessage, []byte{})
 	if err != nil {
 		log.Printf("%v\n", err)
 	}

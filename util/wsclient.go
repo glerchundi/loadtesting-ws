@@ -21,11 +21,6 @@ const (
 	maxMessageSize = 512
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 // Message is  a bare minimum representation of a websocket message.
 type Message struct {
 	Type int
@@ -141,4 +136,10 @@ func (c *WebSocketClient) ReadMessage() <-chan *Message {
 // SendMessage enqueues a Message in the writing channel
 func (c *WebSocketClient) SendMessage(m *Message) {
 	c.send <- m
+}
+
+
+func (c *WebSocketClient) Conn() *websocket.Conn {
+	return c.conn
+
 }

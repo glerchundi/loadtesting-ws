@@ -83,7 +83,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	wsclient := util.NewWebSocketClient(conn)
+	wsclient := common.NewWebSocketClient(conn)
 	wsclient.Run()
 	defer wsclient.Close()
 
