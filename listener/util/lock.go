@@ -27,7 +27,6 @@ func (dl *RedLock) Unlock() error {
 	return dl.lock.Unlock()
 }
 
-func (dl *RedLock) Renew() error {
-	_, err := dl.lock.Lock()
-	return err
+func (dl *RedLock) Renew() (bool, error) {
+	return dl.lock.Lock()
 }

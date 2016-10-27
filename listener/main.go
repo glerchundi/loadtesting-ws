@@ -5,13 +5,16 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"strconv"
+	"net"
+	"os"
+	//"strconv"
 
 	"gopkg.in/redis.v5"
 	"gopkg.in/tylerb/graceful.v1"
 	"github.com/glerchundi/redis-issue/listener/util"
 	common "github.com/glerchundi/redis-issue/util"
 	"github.com/gorilla/websocket"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -33,10 +36,12 @@ func (*httpError) Error() string {
 func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 	id := strings.TrimLeft(r.URL.Path, "/")
 
+	/*
 	var sleepMs time.Duration = -1
-	if n, err := strconv.Atoi(strings.Split(id, "-")[0]); err != nil && n > 0 {
+	if n, err := strconv.Atoi(strings.Split(id, "-")[0]); err == nil && n > 0 {
 		sleepMs = time.Duration(n)
 	}
+	*/
 
 	waitGroup.Add(1)
 	defer waitGroup.Done()
@@ -49,9 +54,11 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 		return &httpError{http.StatusInternalServerError}
 	}
 	defer func() {
-		if sleepMs > 0  {
-			time.Sleep(sleepMs * time.Millisecond)
+		/*	
+		if sleepMs  0  {
+			time.Sleep(sleepMs * 10 * time.Millisecond)
 		}
+		*/
 		if err := dlock.Unlock(); err != nil {
 			log.Printf("failed to unlock dlock for '%s': %v\n", id, err)
 		}
@@ -88,31 +95,68 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 		case <-quitting:
 			return nil
 		case <-ticker.C:
-			if err := dlock.Renew(); err != nil {
+			if ok, err := dlock.Renew(); err != nil {
 				return err
+			} else if !ok {
+				log.Println("unable to renew lock")
+				return nil
 			}
 		case _, ok := <-psclient.ReadMessage():
 			if !ok {
+				log.Println("redis pubsub channel closed")
 				return nil
 			}
 		case _, ok := <-wsclient.ReadMessage():
 			if !ok {
+				log.Println("websocket channel closed")
 				return nil
 			}
 		}
-
-
 	}
 
 	return nil
 }
 
+func printInterfaces() {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return
+	}
+
+	for _, i := range ifaces {
+		addrs, _ := i.Addrs()
+		if err == nil {
+			for _, addr := range addrs {
+				var ip net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+				log.Println(ip)
+			}
+		}
+	}
+}
+
 func main() {
+	var addr string = "127.0.0.1:6379"
+	var poolSize int = 5000
+
+	fs := pflag.NewFlagSet(os.Args[0], pflag.ExitOnError)
+	fs.StringVar(&addr, "addr", addr, "")
+	fs.IntVar(&poolSize, "pool-size", poolSize, "")
+
+	fs.Parse(os.Args[1:])
+
+	printInterfaces()
+
 	redisClient = redis.NewClient(&redis.Options{
-		Addr:     "127.0.0.1:6379",
+		Addr:     addr,
 		Password: "",
 		DB:       0,
-		PoolSize: 5000,
+		PoolSize: poolSize,
 	})
 
 	_, err := redisClient.Ping().Result()

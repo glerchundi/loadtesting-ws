@@ -114,6 +114,7 @@ func connectAndHandle(index int, templateURL, origin string, waitGroup *common.W
 		for {
 			_, _, err := ws.ReadMessage()
 			if err != nil {
+				log.Printf("%v\n", err)
 				return
 			}
 
