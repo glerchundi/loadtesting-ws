@@ -46,33 +46,38 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 	waitGroup.Add(1)
 	defer waitGroup.Done()
 
-	ttl := 10 * time.Second
-	dlock := util.NewRedLock(redisClient, id, ttl)
+	var dlock *util.RedLock
+	var ttl time.Duration = 10 * time.Second
+	var psclient util.PubSubClient
+	if redisClient != nil {
+		dlock := util.NewRedLock(redisClient, id, ttl)
 
-	ok, err := dlock.Lock()
-	if err != nil {
-		return &httpError{http.StatusInternalServerError}
-	}
-	defer func() {
-		/*	
-		if sleepMs  0  {
-			time.Sleep(sleepMs * 10 * time.Millisecond)
+		ok, err := dlock.Lock()
+		if err != nil {
+			return &httpError{http.StatusInternalServerError}
 		}
-		*/
-		if err := dlock.Unlock(); err != nil {
-			log.Printf("failed to unlock dlock for '%s': %v\n", id, err)
-		}
-	}()
+		defer redisClient.Close()
+		defer func() {
+			/*
+			if sleepMs  0  {
+				time.Sleep(sleepMs * 10 * time.Millisecond)
+			}
+			*/
+			if err := dlock.Unlock(); err != nil {
+				log.Printf("failed to unlock dlock for '%s': %v\n", id, err)
+			}
+		}()
 
-	if !ok {
-		return &httpError{http.StatusForbidden}
+		if !ok {
+			return &httpError{http.StatusForbidden}
+		}
+
+		psclient = util.NewRedPubSubClient(redisClient)
+	} else {
+		psclient = util.NewMockPubSubClient()
 	}
 
-	log.Printf("Client connected to: %s\n", r.URL)
-	defer log.Printf("Client disconnected from: %s\n", r.URL)
-
-	psclient := util.NewPubSubClient(redisClient)
-	err = psclient.Run(id)
+	err := psclient.Run(id)
 	if err != nil {
 		return err
 	}
@@ -86,6 +91,9 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) error {
 	wsclient := common.NewWebSocketClient(conn)
 	wsclient.Run()
 	defer wsclient.Close()
+
+	log.Printf("Client connected to: %s\n", r.URL)
+	defer log.Printf("Client disconnected from: %s\n", r.URL)
 
 	ticker := time.NewTicker((ttl * 9) / 10)
 	defer ticker.Stop()
@@ -152,16 +160,18 @@ func main() {
 
 	printInterfaces()
 
-	redisClient = redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: "",
-		DB:       0,
-		PoolSize: poolSize,
-	})
+	if addr != "" {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     addr,
+			Password: "",
+			DB:       0,
+			PoolSize: poolSize,
+		})
 
-	_, err := redisClient.Ping().Result()
-	if err != nil {
-		log.Fatalf("%v", err)
+		_, err := redisClient.Ping().Result()
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
 	}
 
 	upgrader = websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
@@ -195,7 +205,7 @@ func main() {
 	}
 	close(quitting)
 
-	err = waitGroup.WaitTimeout(10 * time.Second)
+	err := waitGroup.WaitTimeout(10 * time.Second)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

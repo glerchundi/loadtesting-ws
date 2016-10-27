@@ -11,8 +11,15 @@ type sendMessage struct {
 	msg  []byte
 }
 
+type PubSubClient interface {
+	Run(string) error
+	Close() error
+	ReadMessage() <-chan []byte
+	SendMessage(subj string, msg []byte)
+}
+
 // PubSubClient is an middleman between the subscription and the outside.
-type PubSubClient struct {
+type RedPubSubClient struct {
 	// The pubsub connection.
 	redisClient *redis.Client
 
@@ -30,8 +37,8 @@ type PubSubClient struct {
 }
 
 // NewPubSubClient creates a new pubsub client
-func NewPubSubClient(redisClient *redis.Client) *PubSubClient {
-	return &PubSubClient{
+func NewRedPubSubClient(redisClient *redis.Client) PubSubClient {
+	return &RedPubSubClient{
 		redisClient: redisClient,
 		closing:     false,
 		recv:        make(chan []byte, 256),
@@ -39,7 +46,7 @@ func NewPubSubClient(redisClient *redis.Client) *PubSubClient {
 	}
 }
 
-func (c *PubSubClient) readPump() {
+func (c *RedPubSubClient) readPump() {
 	defer func() {
 		c.Close()
 		close(c.recv)
@@ -59,7 +66,7 @@ func (c *PubSubClient) readPump() {
 }
 
 // writePump pumps messages from the hub to the pubsub connection.
-func (c *PubSubClient) writePump() {
+func (c *RedPubSubClient) writePump() {
 	defer func() {
 		c.Close()
 		close(c.send)
@@ -83,7 +90,7 @@ func (c *PubSubClient) writePump() {
 }
 
 // Run executes reader/writer routines without blocking
-func (c *PubSubClient) Run(id string) error {
+func (c *RedPubSubClient) Run(id string) error {
 	// subscribe to redis channel
 	sub, err := c.redisClient.Subscribe(id)
 	if err != nil {
@@ -100,7 +107,7 @@ func (c *PubSubClient) Run(id string) error {
 }
 
 // Close closes underlying subscription
-func (c *PubSubClient) Close() error {
+func (c *RedPubSubClient) Close() error {
 	c.closing = true
 	if c.sub != nil {
 		return c.sub.Unsubscribe()
@@ -109,11 +116,44 @@ func (c *PubSubClient) Close() error {
 }
 
 // ReadMessage returns a Message reading channel
-func (c *PubSubClient) ReadMessage() <-chan []byte {
+func (c *RedPubSubClient) ReadMessage() <-chan []byte {
 	return c.recv
 }
 
 // SendMessage enqueues a Message in the writing channel
-func (c *PubSubClient) SendMessage(subj string, msg []byte) {
+func (c *RedPubSubClient) SendMessage(subj string, msg []byte) {
 	c.send <- &sendMessage{subj, msg}
+}
+
+// PubSubClient is an middleman between the subscription and the outside.
+type MockPubSubClient struct {
+	// Buffered channel of inbound messages.
+	recv chan []byte
+
+	// Buffered channel of outbound messages.
+	send chan *sendMessage
+}
+
+// NewPubSubClient creates a new pubsub client
+func NewMockPubSubClient() PubSubClient {
+	return &MockPubSubClient{
+		recv: make(chan []byte, 256),
+		send: make(chan *sendMessage, 256),
+	}
+}
+
+func (c *MockPubSubClient) Run(string) error {
+	return nil
+}
+
+func (c *MockPubSubClient) Close() error {
+	close(c.recv)
+	return nil
+}
+
+func (c *MockPubSubClient) ReadMessage() <-chan []byte {
+	return c.recv
+}
+
+func (c *MockPubSubClient) SendMessage(subj string, msg []byte) {
 }
