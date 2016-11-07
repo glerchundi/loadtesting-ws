@@ -1,0 +1,13 @@
+FROM golang:1.7.3
+
+ARG version
+ENV VERSION ${version}
+
+RUN go get -u github.com/jteeuwen/go-bindata/...
+
+ADD . /go/src/github.com/glerchundi/loadtesting-ws
+WORKDIR /go/src/github.com/glerchundi/loadtesting-ws
+RUN make fmt && \
+    make vet && \
+    make test && \
+    make build OS=linux

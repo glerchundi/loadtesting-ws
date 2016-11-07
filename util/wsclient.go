@@ -1,8 +1,8 @@
 package util
 
 import (
-	"time"
 	"log"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -42,9 +42,9 @@ type WebSocketClient struct {
 // NewWebSocketClient creates a new websocket client
 func NewWebSocketClient(conn *websocket.Conn) *WebSocketClient {
 	return &WebSocketClient{
-		conn:   conn,
-		recv:   make(chan *Message, 256),
-		send:   make(chan *Message, 256),
+		conn: conn,
+		recv: make(chan *Message, 256),
+		send: make(chan *Message, 256),
 	}
 }
 
@@ -61,12 +61,9 @@ func (c *WebSocketClient) readPump() {
 	for {
 		t, d, err := c.conn.ReadMessage()
 		if err != nil {
-			log.Printf("%v\n", err)
-			/*
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
 				log.Printf("%v\n", err)
 			}
-			*/
 			break
 		}
 
@@ -137,7 +134,6 @@ func (c *WebSocketClient) ReadMessage() <-chan *Message {
 func (c *WebSocketClient) SendMessage(m *Message) {
 	c.send <- m
 }
-
 
 func (c *WebSocketClient) Conn() *websocket.Conn {
 	return c.conn

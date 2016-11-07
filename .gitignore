@@ -4,8 +4,10 @@
 *.o
 *.a
 *.so
+*-amd64
 
 # Folders
+bin
 _obj
 _test
 

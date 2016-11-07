@@ -1,14 +1,12 @@
-hash: 9567ed0a535c64d430fdd6728c55cc0a33553ffac7b781e9020c97ebc3f75dab
-updated: 2016-10-27T22:12:24.772732304+02:00
+hash: 405249bc11384e524070be216856da9ebb1959be779df5b2c9674dcc2f23f359
+updated: 2016-11-09T17:17:55.036948377+01:00
 imports:
 - name: github.com/beorn7/perks
   version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
-- name: github.com/bsm/redis-lock
-  version: 1276befe593b36127d88aeac09faca3af17a14fc
 - name: github.com/golang/protobuf
-  version: 98fa357170587e470c5f27d3c3ea0947b71eb455
+  version: 4bd1920723d7b7c925de087aa32e2187708897f7
   subpackages:
   - proto
 - name: github.com/gorilla/websocket
@@ -18,7 +16,7 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/prometheus/client_golang
-  version: 3fb8ace93bc4ccddea55af62320c2fd109252880
+  version: c5b7fccd204277076155f10851dad72b76a49317
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
@@ -26,7 +24,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 85637ea67b04b5c3bb25e671dacded2977f8f9f6
+  version: f36a8da2241e626287bf1adfa7bc2f66bbc6770b
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -35,25 +33,6 @@ imports:
   version: abf152e5f3e97f2fafac028d2cc06c1feb87ffa5
 - name: github.com/spf13/pflag
   version: 5ccb023bc27df288a957c5e994cd44fd19619465
-- name: gopkg.in/bsm/ratelimit.v1
-  version: db14e161995a5177acef654cb0dd785e8ee8bc22
-- name: gopkg.in/redis.v4
-  version: 8a8d997ad58dc600d2ff0f64914102192f3b51ac
-  subpackages:
-  - internal
-  - internal/consistenthash
-  - internal/errors
-  - internal/hashtag
-  - internal/pool
-  - internal/proto
-- name: gopkg.in/redis.v5
-  version: 80cf5d1652d5590c35edc6c2dc1aa354790e3010
-  subpackages:
-  - internal
-  - internal/consistenthash
-  - internal/hashtag
-  - internal/pool
-  - internal/proto
 - name: gopkg.in/tylerb/graceful.v1
   version: 50a48b6e73fcc75b45e22c05b79629a67c79e938
 testImports: []
